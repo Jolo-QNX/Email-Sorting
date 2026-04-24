@@ -1,0 +1,10 @@
+﻿* text=auto
+Dockerfile text eol=lf
+.dockerignore text eol=lf
+*.sh text eol=lf
+*.py text eol=lf
+*.php text eol=lf
+*.html text eol=lf
+*.ini text eol=lf
+*.json text eol=lf
+*.lock text eol=lf
