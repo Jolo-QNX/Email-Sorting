@@ -242,6 +242,8 @@ tbody tr:hover td{background:#f8fafc}
 .status-pill::before{content:"";width:6px;height:6px;border-radius:999px;background:currentColor;opacity:.65}
 .status-pill.matched{background:var(--success-soft);color:#166534}
 .status-pill.no-email-found{background:var(--danger-soft);color:#991b1b}
+.status-pill.email-users-file{background:var(--indigo-soft);color:#3730a3}
+.status-pill.confidential-only{background:var(--warning-soft);color:#92400e}
 .source-location{color:#334155;line-height:1.5}
 
 .empty-state{padding:64px 22px;color:var(--muted);text-align:center}
@@ -405,6 +407,8 @@ tbody tr:hover td{background:#f8fafc}
         <button class="tab-button active" type="button" data-tab="matched">Matched <span id="matchedTabCount">0</span></button>
         <button class="tab-button" type="button" data-tab="non_matched">Non-Matched <span id="nonMatchedTabCount">0</span></button>
         <button class="tab-button" type="button" data-tab="all">All Records <span id="allTabCount">0</span></button>
+        <button class="tab-button" type="button" data-tab="email_users">Email Users File <span id="emailUsersTabCount">0</span></button>
+        <button class="tab-button" type="button" data-tab="confidential_only">Confidential Only <span id="confidentialOnlyTabCount">0</span></button>
       </div>
       <div class="visually-muted" id="sortHint">Click a column header to sort.</div>
     </div>
@@ -440,7 +444,7 @@ tbody tr:hover td{background:#f8fafc}
   </section>
 
   <footer class="app-footer">
-    <span>Email Matching Dashboard<span class="dot"></span>QNX · PNB</span>
+    <span>Email Matching Dashboard<span class="dot"></span>QNX</span>
   </footer>
 </main>
 
@@ -469,6 +473,8 @@ tbody tr:hover td{background:#f8fafc}
   const state = {
     matched: [],
     non_matched: [],
+    email_users: [],
+    confidential_only: [],
     activeTab: 'matched',
     searchTerm: '',
     sortKey: 'empno',
@@ -508,11 +514,15 @@ tbody tr:hover td{background:#f8fafc}
     document.getElementById('matchedTabCount').textContent = formatNumber(state.matched.length);
     document.getElementById('nonMatchedTabCount').textContent = formatNumber(state.non_matched.length);
     document.getElementById('allTabCount').textContent = formatNumber(getAllRecords().length);
+    document.getElementById('emailUsersTabCount').textContent = formatNumber(state.email_users.length);
+    document.getElementById('confidentialOnlyTabCount').textContent = formatNumber(state.confidential_only.length);
   }
 
   function getCurrentDataset(){
     if(state.activeTab === 'matched') return state.matched;
     if(state.activeTab === 'non_matched') return state.non_matched;
+    if(state.activeTab === 'email_users') return state.email_users;
+    if(state.activeTab === 'confidential_only') return state.confidential_only;
     return getAllRecords();
   }
 
@@ -744,7 +754,7 @@ tbody tr:hover td{background:#f8fafc}
             const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
 
             link.href = url;
-            link.download = `email-matching-visible-records-${timestamp}.csv`;
+            link.download = `email-matching-${state.activeTab}-visible-records-${timestamp}.csv`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -783,6 +793,8 @@ tbody tr:hover td{background:#f8fafc}
 
                 state.matched = Array.isArray(data.matched) ? data.matched : [];
                 state.non_matched = Array.isArray(data.non_matched) ? data.non_matched : [];
+                state.email_users = Array.isArray(data.email_users) ? data.email_users : [];
+                state.confidential_only = Array.isArray(data.confidential_only) ? data.confidential_only : state.non_matched;
                 state.activeTab = 'matched';
                 state.searchTerm = '';
                 state.sortKey = 'empno';
