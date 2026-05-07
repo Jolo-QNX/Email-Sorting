@@ -373,6 +373,7 @@ function processConfidentialRecords(array $confidentialUpload, string $excelPass
 
     $matched = [];
     $nonMatched = [];
+    $confidentialOnly = [];
     $totalConfidentialRecords = 0;
 
     foreach ($rows as $row) {
@@ -390,6 +391,7 @@ function processConfidentialRecords(array $confidentialUpload, string $excelPass
         $empNo = $empNoRaw;
         $lastName = normalizeToUSFormat($row['B'] ?? '');
         $firstName = normalizeToUSFormat($row['C'] ?? '');
+        $confidentialEmail = strtolower(trim((string)($row['N'] ?? '')));
 
         if ($empNo === '' && $lastName === '' && $firstName === '') {
             continue;
@@ -429,13 +431,30 @@ function processConfidentialRecords(array $confidentialUpload, string $excelPass
                 'email_source_columns' => '',
                 'email_source_location' => 'No matching email source found'
             ];
+
+            $confidentialOnly[] = [
+                'empno' => $empNo,
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                'full_name' => $fullName,
+                'email' => $confidentialEmail,
+                'status' => 'Confidential Only',
+                'email_source_file' => $confidentialEmail !== '' ? $confidentialUpload['name'] : '',
+                'email_source_sheet' => $confidentialEmail !== '' ? $sheet->getTitle() : '',
+                'email_source_row' => $confidentialEmail !== '' ? (int)$rowNumber : '',
+                'email_source_columns' => $confidentialEmail !== '' ? 'N=email, A=empno, B=last_name, C=first_name' : '',
+                'email_source_location' => $confidentialEmail !== ''
+                    ? $confidentialUpload['name'] . ' → ' . $sheet->getTitle() . ' → Row ' . $rowNumber . ' → Column N'
+                    : 'No email found in Confidential Employee file Column N'
+            ];
         }
     }
 
     return [
         'total_confidential_records' => $totalConfidentialRecords,
         'matched' => $matched,
-        'non_matched' => $nonMatched
+        'non_matched' => $nonMatched,
+        'confidential_only' => $confidentialOnly
     ];
 }
 
@@ -454,7 +473,7 @@ try {
 
     $matched = $confidentialResult['matched'];
     $nonMatched = $confidentialResult['non_matched'];
-    $confidentialOnly = $nonMatched;
+    $confidentialOnly = $confidentialResult['confidential_only'];
 
     jsonResponse([
         'success' => true,
