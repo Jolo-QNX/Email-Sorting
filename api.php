@@ -308,10 +308,12 @@ function loadSpreadsheetOptionalPassword(array $upload, string $excelPassword)
     }
 }
 
-function buildEmailLookup(array $emailUpload, string $excelPassword): array
+function buildEmailLookup(array $emailUpload, string $excelPassword, ?array &$emailUsersRecords = null): array
 {
     $spreadsheet = loadSpreadsheetOptionalPassword($emailUpload, $excelPassword);
     $lookup = [];
+    $emailUsersRecords = [];
+    $seenEmailRows = [];
 
     foreach ($spreadsheet->getAllSheets() as $sheet) {
         $sheetName = $sheet->getTitle();
@@ -324,6 +326,27 @@ function buildEmailLookup(array $emailUpload, string $excelPassword): array
 
             if ($email !== '' && strpos($email, '@') !== false) {
                 $key = trim($firstName . ' ' . $lastName);
+                $sourceLocation = $emailUpload['name'] . ' → ' . $sheetName . ' → Row ' . $rowNumber . ' → Column B';
+
+                $record = [
+                    'empno' => '',
+                    'first_name' => $firstName,
+                    'last_name' => $lastName,
+                    'full_name' => $key,
+                    'email' => $email,
+                    'status' => 'Email Users File',
+                    'email_source_file' => $emailUpload['name'],
+                    'email_source_sheet' => $sheetName,
+                    'email_source_row' => (int)$rowNumber,
+                    'email_source_columns' => 'B=email, C=first_name, D=last_name',
+                    'email_source_location' => $sourceLocation
+                ];
+
+                $dedupeKey = $sheetName . '|' . $rowNumber . '|' . $email;
+                if (!isset($seenEmailRows[$dedupeKey])) {
+                    $emailUsersRecords[] = $record;
+                    $seenEmailRows[$dedupeKey] = true;
+                }
 
                 if ($key !== '') {
                     $lookup[$key] = [
@@ -332,7 +355,7 @@ function buildEmailLookup(array $emailUpload, string $excelPassword): array
                         'email_source_sheet' => $sheetName,
                         'email_source_row' => (int)$rowNumber,
                         'email_source_columns' => 'B=email, C=first_name, D=last_name',
-                        'email_source_location' => $emailUpload['name'] . ' → ' . $sheetName . ' → Row ' . $rowNumber . ' → Column B'
+                        'email_source_location' => $sourceLocation
                     ];
                 }
             }
@@ -425,22 +448,28 @@ try {
     $confidentialUpload = getUpload('confidential_file');
     $excelPassword = trim((string)($_POST['excel_password'] ?? ''));
 
-    $emailLookup = buildEmailLookup($emailUpload, $excelPassword);
+    $emailUsersRecords = [];
+    $emailLookup = buildEmailLookup($emailUpload, $excelPassword, $emailUsersRecords);
     $confidentialResult = processConfidentialRecords($confidentialUpload, $excelPassword, $emailLookup);
 
     $matched = $confidentialResult['matched'];
     $nonMatched = $confidentialResult['non_matched'];
+    $confidentialOnly = $nonMatched;
 
     jsonResponse([
         'success' => true,
         'summary' => [
             'total_confidential_records' => $confidentialResult['total_confidential_records'],
-            'total_email_users_loaded' => count($emailLookup),
+            'total_email_users_loaded' => count($emailUsersRecords),
             'matched_count' => count($matched),
-            'non_matched_count' => count($nonMatched)
+            'non_matched_count' => count($nonMatched),
+            'email_users_count' => count($emailUsersRecords),
+            'confidential_only_count' => count($confidentialOnly)
         ],
         'matched' => $matched,
-        'non_matched' => $nonMatched
+        'non_matched' => $nonMatched,
+        'email_users' => $emailUsersRecords,
+        'confidential_only' => $confidentialOnly
     ]);
 } catch (Throwable $error) {
     jsonError($error->getMessage(), 500);
