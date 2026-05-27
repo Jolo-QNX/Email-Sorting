@@ -334,6 +334,14 @@ function buildEmailLookup(array $emailUpload, string $excelPassword, ?array &$em
                     'last_name' => $lastName,
                     'full_name' => $key,
                     'email' => $email,
+                    'designation' => '',
+                    'rank' => '',
+                    'etype' => '',
+                    'emp_status' => '',
+                    'ou_name' => '',
+                    'department' => '',
+                    'group' => '',
+                    'sector' => '',
                     'status' => 'Email Users File',
                     'email_source_file' => $emailUpload['name'],
                     'email_source_sheet' => $sheetName,
@@ -365,6 +373,21 @@ function buildEmailLookup(array $emailUpload, string $excelPassword, ?array &$em
     return $lookup;
 }
 
+
+function extractConfidentialExtraColumns(array $row): array
+{
+    return [
+        'designation' => trim((string)($row['E'] ?? '')),
+        'rank' => trim((string)($row['G'] ?? '')),
+        'etype' => trim((string)($row['H'] ?? '')),
+        'emp_status' => trim((string)($row['I'] ?? '')),
+        'ou_name' => trim((string)($row['J'] ?? '')),
+        'department' => trim((string)($row['K'] ?? '')),
+        'group' => trim((string)($row['L'] ?? '')),
+        'sector' => trim((string)($row['M'] ?? ''))
+    ];
+}
+
 function processConfidentialRecords(array $confidentialUpload, string $excelPassword, array $emailLookup): array
 {
     $spreadsheet = loadSpreadsheetOptionalPassword($confidentialUpload, $excelPassword);
@@ -376,7 +399,7 @@ function processConfidentialRecords(array $confidentialUpload, string $excelPass
     $confidentialOnly = [];
     $totalConfidentialRecords = 0;
 
-    foreach ($rows as $row) {
+    foreach ($rows as $rowNumber => $row) {
         $empNoRaw = trim((string)($row['A'] ?? ''));
 
         if (
@@ -397,6 +420,8 @@ function processConfidentialRecords(array $confidentialUpload, string $excelPass
             continue;
         }
 
+        $extraColumns = extractConfidentialExtraColumns($row);
+
         $totalConfidentialRecords++;
         $searchKey = trim($firstName . ' ' . $lastName);
         $fullName = trim($firstName . ' ' . $lastName);
@@ -410,6 +435,14 @@ function processConfidentialRecords(array $confidentialUpload, string $excelPass
                 'last_name' => $lastName,
                 'full_name' => $fullName,
                 'email' => $source['email'],
+                'designation' => $extraColumns['designation'],
+                'rank' => $extraColumns['rank'],
+                'etype' => $extraColumns['etype'],
+                'emp_status' => $extraColumns['emp_status'],
+                'ou_name' => $extraColumns['ou_name'],
+                'department' => $extraColumns['department'],
+                'group' => $extraColumns['group'],
+                'sector' => $extraColumns['sector'],
                 'status' => 'Matched',
                 'email_source_file' => $source['email_source_file'],
                 'email_source_sheet' => $source['email_source_sheet'],
@@ -424,6 +457,14 @@ function processConfidentialRecords(array $confidentialUpload, string $excelPass
                 'last_name' => $lastName,
                 'full_name' => $fullName,
                 'email' => '',
+                'designation' => $extraColumns['designation'],
+                'rank' => $extraColumns['rank'],
+                'etype' => $extraColumns['etype'],
+                'emp_status' => $extraColumns['emp_status'],
+                'ou_name' => $extraColumns['ou_name'],
+                'department' => $extraColumns['department'],
+                'group' => $extraColumns['group'],
+                'sector' => $extraColumns['sector'],
                 'status' => 'No Email Found',
                 'email_source_file' => '',
                 'email_source_sheet' => '',
@@ -438,6 +479,14 @@ function processConfidentialRecords(array $confidentialUpload, string $excelPass
                 'last_name' => $lastName,
                 'full_name' => $fullName,
                 'email' => $confidentialEmail,
+                'designation' => $extraColumns['designation'],
+                'rank' => $extraColumns['rank'],
+                'etype' => $extraColumns['etype'],
+                'emp_status' => $extraColumns['emp_status'],
+                'ou_name' => $extraColumns['ou_name'],
+                'department' => $extraColumns['department'],
+                'group' => $extraColumns['group'],
+                'sector' => $extraColumns['sector'],
                 'status' => 'Confidential Only',
                 'email_source_file' => $confidentialEmail !== '' ? $confidentialUpload['name'] : '',
                 'email_source_sheet' => $confidentialEmail !== '' ? $sheet->getTitle() : '',
