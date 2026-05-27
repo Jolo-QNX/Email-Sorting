@@ -226,7 +226,7 @@ input[type="file"]::file-selector-button:hover{transform:translateY(-1px);box-sh
 .table-meta strong{color:var(--ink);font-weight:700}
 
 .table-scroll{width:100%;overflow:auto;max-height:720px;background:#fff}
-table{width:100%;min-width:1220px;border-collapse:separate;border-spacing:0;background:#fff}
+table{width:100%;min-width:2200px;border-collapse:separate;border-spacing:0;background:#fff}
 th,td{padding:13px 16px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top;font-size:13px}
 th{
   position:sticky;top:0;z-index:2;background:rgba(246,248,252,.92);backdrop-filter:blur(8px);
@@ -429,13 +429,21 @@ tbody tr:hover td{background:#f8fafc}
             <th class="sortable" data-sort="last_name">Last Name</th>
             <th class="sortable" data-sort="full_name">Full Name</th>
             <th class="sortable" data-sort="email">Email</th>
+            <th class="sortable" data-sort="designation">Designation</th>
+            <th class="sortable" data-sort="rank">Rank</th>
+            <th class="sortable" data-sort="etype">Etype</th>
+            <th class="sortable" data-sort="emp_status">Emp Status</th>
+            <th class="sortable" data-sort="ou_name">OU Name</th>
+            <th class="sortable" data-sort="department">Department</th>
+            <th class="sortable" data-sort="group">Group</th>
+            <th class="sortable" data-sort="sector">Sector</th>
             <th class="sortable" data-sort="status">Match Status</th>
             <th class="sortable" data-sort="email_source_location">Email Source Location</th>
           </tr>
         </thead>
         <tbody id="resultsBody">
           <tr>
-            <td colspan="7" class="empty-state">
+            <td colspan="15" class="empty-state">
               <strong>No processed records yet</strong>
               Upload the required Excel files and click Process Files.
             </td>
@@ -489,6 +497,16 @@ tbody tr:hover td{background:#f8fafc}
   const escapeHtml = v => String(v ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
   const normalizeId = v => String(v ?? '').trim().replace(/\s+/g,' ').toUpperCase();
   const getAllRecords = () => [...state.matched, ...state.non_matched];
+  const confidentialColumns = [
+    { key: 'designation', label: 'Designation' },
+    { key: 'rank', label: 'Rank' },
+    { key: 'etype', label: 'Etype' },
+    { key: 'emp_status', label: 'Emp Status' },
+    { key: 'ou_name', label: 'OU Name' },
+    { key: 'department', label: 'Department' },
+    { key: 'group', label: 'Group' },
+    { key: 'sector', label: 'Sector' }
+  ];
 
   function setLoading(isLoading, text){
     processButton.disabled = isLoading;
@@ -530,7 +548,8 @@ tbody tr:hover td{background:#f8fafc}
 
   function recordMatchesSearch(record, searchTerm){
     if(!searchTerm) return true;
-    const searchable = [record.empno, record.first_name, record.last_name, record.full_name, record.email, record.status, record.email_source_location].join(' ').toLowerCase();
+    const confidentialValues = confidentialColumns.map(column => record[column.key]);
+    const searchable = [record.empno, record.first_name, record.last_name, record.full_name, record.email, ...confidentialValues, record.status, record.email_source_location].join(' ').toLowerCase();
     return searchable.includes(searchTerm.toLowerCase());
   }
 
@@ -581,7 +600,7 @@ tbody tr:hover td{background:#f8fafc}
             if (rows.length === 0) {
                 resultsBody.innerHTML = `
                     <tr>
-                        <td colspan="7" class="empty-state">
+                        <td colspan="15" class="empty-state">
                             <strong>No records found</strong>
                             Adjust the quick search, remove the bulk ID filter, or check the pasted Employee IDs.
                         </td>
@@ -593,6 +612,9 @@ tbody tr:hover td{background:#f8fafc}
             resultsBody.innerHTML = rows.map(record => {
                 const statusClass = String(record.status || '').toLowerCase().replace(/\s+/g, '-');
                 const fullName = record.full_name || `${record.first_name || ''} ${record.last_name || ''}`.trim();
+                const extraCells = confidentialColumns
+                    .map(column => `<td>${escapeHtml(record[column.key])}</td>`)
+                    .join('');
 
                 return `
                     <tr>
@@ -601,6 +623,7 @@ tbody tr:hover td{background:#f8fafc}
                         <td>${escapeHtml(record.last_name)}</td>
                         <td>${escapeHtml(fullName)}</td>
                         <td class="email">${escapeHtml(record.email)}</td>
+                        ${extraCells}
                         <td><span class="status-pill ${escapeHtml(statusClass)}">${escapeHtml(record.status)}</span></td>
                         <td class="source-location">${escapeHtml(record.email_source_location)}</td>
                     </tr>
@@ -735,13 +758,23 @@ tbody tr:hover td{background:#f8fafc}
                 return;
             }
 
-            const headers = ['EmpNo', 'First Name', 'Last Name', 'Full Name', 'Email', 'Match Status', 'Email Source Location'];
+            const headers = [
+                'EmpNo',
+                'First Name',
+                'Last Name',
+                'Full Name',
+                'Email',
+                ...confidentialColumns.map(column => column.label),
+                'Match Status',
+                'Email Source Location'
+            ];
             const rows = state.visibleRows.map(record => [
                 record.empno,
                 record.first_name,
                 record.last_name,
                 record.full_name || `${record.first_name || ''} ${record.last_name || ''}`.trim(),
                 record.email,
+                ...confidentialColumns.map(column => record[column.key]),
                 record.status,
                 record.email_source_location
             ]);
